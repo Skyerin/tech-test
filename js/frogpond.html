@@ -11,24 +11,74 @@
         .frogPond .frogs li { margin: 1em; padding: 0.25em; list-style: none; font-weight: bold; font-size: 1em; border-radius: 0.25em; cursor: pointer; }
         .frogPond .m { color: darkblue; background-color: #1182ca; }
         .frogPond .f { color: hotpink; background-color: #ffcccc; }
-        .frogPond .selected { background-color: #FFFFFF; }
+
+        .frogPond .selected {
+            background-color: #FFFFFF;
+        }
+
+        .frogPond .hidden {
+            display: none;
+        }
+
+        .frogPond .overlay {
+            position:absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 9999;
+            width: 100%;
+        }
+
+        .frogPond .overlay .newFrogForm {
+            height: 120px;
+            padding: 20px;
+            width: 300px;
+            margin: 30px auto;
+            background-color: #EEEEEE;
+        }
+
+        .frogPond .overlay .newFrogForm label, .frogPond .overlay .newFrogForm span {
+            display: inline-block;
+            width: 70px;
+        }
+
+        .frogPond .overlay .newFrogForm label.radioButtonLabel {
+            width: 55px;
+        }
     </style>
 
-    <body> 
+    <body>
 
         <script>
 
+            // TODO: bring in requirejs and give each object its own file
             var performActions = function (e) { // Helper function for clicking buttons
                 switch(e.target.className) {
                 case 'add':
-                    alert('you hit add');
+                    // should always be hidden when we get here, but just in case
+                    if (this.newFrogPopup.classList.contains('hidden')) {
+                        this.newFrogPopup.classList.remove('hidden');
+                    }
+
+
                     break;
 
                 case 'kill':
-                    alert('you hit kill');
+                    var frogsToKill = this.getSelectedFrogs();
+
+                    if (frogsToKill.length) {
+                        for (var i = 0, l = frogsToKill.length; i < l; i++) {
+                            this.killFrog(frogsToKill[i]);
+                        }
+                    } else {
+                        // TODO: should really change these from being alerts to being onscreen messages.
+                        alert("No frogs selected to kill.");
+                    }
                     break;
 
                 case 'breed':
+                    debugger;
                     alert('you hit breed');
                     break;
                 }
@@ -38,33 +88,91 @@
                 this.create();
             };
 
+            // TODO: Pond object is getting big. Look at ways of cutting it down and moving logic into other objects
             Pond.prototype = function () {
                 var _body,
                     _frogs,
                     _actions, /* DOM element holders */
                     _pond,    /* reference to self */
-                    Frogs,    /* Frogs in Pond */
-                    selectedFrogs = [],
+                    _nameInput,
+                    _submit,
+                    newFrogPopup;
 
-                    create = function () {
-                        /* Set up DOM */
-                        _body = document.createElement('div');
-                        _body.className = 'frogPond';
-                        _body.innerHTML = '<ul class="frogs"></ul><div class="actions"><button class="add">Add a Frog</button><button class="kill">Kill a frog</button><button class="breed">Encourage breeding</button></div>';
-                        document.body.appendChild(_body);
-                        _frogs = _body.getElementsByClassName('frogs')[0];
-                        _actions = _body.getElementsByClassName('actions')[0];
-                        /* End DOM Setup */
+                return {
+                    create: function () {
+                        this.domSetup();
 
                         this.Frogs = [];
                         _pond = this;
 
-                        _actions.addEventListener('click', function (e) { performActions.call(_pond, e); }, false);
-                        /* perform an action on this pond only */
+                        this.addEventListeners();
                     },
 
-                    add = function (frogs) { /* accepts array of frogs or single frog */
+                    domSetup: function () {
+                        _body = document.createElement('div');
+                        _body.className = 'frogPond';
+
+                        var actionsHtml =
+                            '<div class="actions">' +
+                                '<button class="add">Add a Frog</button>' +
+                                '<button class="kill">Kill a frog</button>' +
+                                '<button class="breed">Encourage breeding</button>' +
+                            '</div>';
+
+                        _body.innerHTML = '<ul class="frogs"></ul>' + actionsHtml;
+                        document.body.appendChild(_body);
+
+                        this.newFrogPopup = document.createElement('div');
+                        this.newFrogPopup.className = 'overlay hidden';
+
+                        this.newFrogPopup.innerHTML =
+                            '<div class="newFrogForm">' +
+                                '<div class="formInput">' +
+                                    '<label for="frogName">Name: </label>' +
+                                    '<input type="text" id="frogName" name="frogName" class="textInput" required />' +
+                                '</div>' +
+                                '<div class="formInput radio">' +
+                                    '<span class="genderText">Gender: </span>' +
+                                    '<label class="radioButtonLabel" for="frogGenderMale">Male: </label>' +
+                                    '<input type="radio" id="frogGenderMale" name="frogGender" value="m" class="radioInput" />' +
+                                    '<label class="radioButtonLabel" for="frogGenderFemale">Female: </label>' +
+                                    '<input type="radio" id="frogGenderFemale" name="frogGender" value="f" class="radioInput" checked=checked />' +
+                                '</div>' +
+
+                                '<button disabled=disabled class="submit">Submit</button>' +
+                            '</div>';
+
+                        _body.appendChild(this.newFrogPopup);
+
+                        _frogs = _body.getElementsByClassName('frogs')[0];
+                        _actions = _body.getElementsByClassName('actions')[0];
+                        _nameInput = this.newFrogPopup.querySelector('input#frogName');
+                        _submit = this.newFrogPopup.querySelector('.submit');
+                    },
+
+                    addEventListeners: function () {
+                        /* perform an action on this pond only */
+                        _actions.addEventListener('click', function (e) { performActions.call(_pond, e); }, false);
+
+                        _nameInput.addEventListener('keyup', function (e) {
+                            var submitButton = this.newFrogPopup.querySelector('.submit');
+                            submitButton.disabled = e.currentTarget.validity.valid ? false : true;
+                        }.bind(_pond));
+
+                        _submit.addEventListener('click', function () {
+                            this.add(new Frog({
+                                name: this.newFrogPopup.querySelector('input[name="frogName"]').value,
+                                gender: this.newFrogPopup.querySelector('input[name="frogGender"]:checked').value
+                            }));
+
+                            this.newFrogPopup.querySelector('input[name="frogName"]').value = "";
+                            this.newFrogPopup.classList.add('hidden');
+                        }.bind(_pond));
+                    },
+
+                    add: function (frogs) { /* accepts array of frogs or single frog */
                         if(frogs) {
+                            // check if frogs is an array. if not, then make it into an array before going further
                             if(!frogs.propertyIsEnumerable(length) && typeof frogs.splice !== "function") {
                                 frogs = [frogs];
                             }
@@ -75,7 +183,7 @@
                         }
                     },
 
-                    addFrog = function (frog) {
+                    addFrog: function (frog) {
                         /* only frogs allowed in this pond, this is a speciesist pond */
                         if(frog instanceof Frog) {
                             frog.setId(this.Frogs[this.Frogs.length - 1] ? this.Frogs[this.Frogs.length - 1].getId() + 1 : 1);
@@ -91,7 +199,6 @@
                             _el.addEventListener('click', function (e) {
                                 if (this.classList.contains('selected')) {
                                     this.classList.remove('selected');
-                                    selectedFrogs.includes()
                                 } else {
                                     this.classList.add('selected');
                                 }
@@ -99,15 +206,44 @@
                         };
                     },
 
-                    getSelectedFrogs = function () {
-                        return selectedFrogs;
-                    };
+                    killFrog: function (frogToKill) {
+                        if(frogToKill instanceof Frog) {
+                            var frogDomElement = _frogs.querySelector('li[data-frogid="' + frogToKill.getId() + '"]');
 
-                return {
-                    create: create,
-                    add: add,
-                    addFrog: addFrog,
-                    getSelectedFrogs: getSelectedFrogs
+                            // die die die
+                            frogDomElement.remove();
+
+                            this.Frogs = this.Frogs.filter(function (frog) {
+                                return frog.getId() === frogToKill.getId();
+                            });
+                        }
+                    },
+
+                    getSelectedFrogIds: function () {
+                        // getElementsByClassName returns a html collection. Can be iterated over similar to an array,
+                        // but does not have array functions such as map. Could have just for looped through it, then
+                        // we have to create an array and as we loop through, add the elements, then return that array.
+                        // However, we can leverage the function from the array prototype and using call (or apply -
+                        // only difference between the two is apply takes an array of arguments whereas call takes them
+                        // individually), we can then give it the collection as the this arg and the function to invoke
+                        // as the 2nd argument in the call, and we can them map over our html collection.
+                        return Array.prototype.map.call(
+                            _frogs.getElementsByClassName('selected'),
+                            function (selectedFrogElement) {
+                                return parseInt(selectedFrogElement.dataset.frogid);
+                            }
+                        );
+                    },
+
+                    getSelectedFrogs: function (frogIds) {
+                        frogIds = frogIds || this.getSelectedFrogIds();
+
+                        return this.Frogs.filter(function (frog) {
+                            // hurry up ecmascript 7. then I can stop using indexOf and use array.includes
+                            // or I could have just imported in underscore/mout/lodash...
+                            return frogIds.indexOf(frog.getId()) > -1;
+                        });
+                    }
                 };
             }();
 
@@ -116,6 +252,7 @@
             };
 
             Frog.prototype = function () {
+
                 var _id,
                     name,
                     gender,
@@ -126,11 +263,11 @@
                     },
 
                     setId = function (id) {
-                        _id = parseInt(id);
+                        this._id = parseInt(id);
                     },
 
                     getId = function () {
-                        return _id;
+                        return this._id;
                     };
 
                 return { birth: birth, setId: setId, getId: getId };
