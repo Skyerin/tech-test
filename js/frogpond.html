@@ -52,22 +52,29 @@
 
         <script>
 
+            function getRandomNumbersInRange (min, max) {
+                return Math.random() * (max - min) + min;
+            };
+
             // TODO: bring in requirejs and give each object its own file
             var performActions = function (e) { // Helper function for clicking buttons
                 switch(e.target.className) {
                 case 'add':
-                    // should always be hidden when we get here, but just in case
+                case 'close':
                     if (this.newFrogPopup.classList.contains('hidden')) {
                         this.newFrogPopup.classList.remove('hidden');
+                    } else {
+                        this.newFrogPopup.classList.add('hidden');
                     }
-
-
                     break;
 
                 case 'kill':
-                    var frogsToKill = this.getSelectedFrogs();
+                    var getSelectedFrogs = this.getSelectedFrogs.bind(this);
+                    var frogsToKill = getSelectedFrogs();
 
                     if (frogsToKill.length) {
+                        // if we were only supporting IE9 onwards, we could use frogs.forEach(function (frog) { ... }
+                        // or, if we imported something like lodash, we could do _.forEach(frogs, function (frog) { ... }
                         for (var i = 0, l = frogsToKill.length; i < l; i++) {
                             this.killFrog(frogsToKill[i]);
                         }
@@ -78,8 +85,24 @@
                     break;
 
                 case 'breed':
-                    debugger;
-                    alert('you hit breed');
+                    var getSelectedFrogs = this.getSelectedFrogs.bind(this);
+                    var frogsToBreed = this.getFrogsForBreeding(getSelectedFrogs());
+
+                    if (frogsToBreed) {
+                        this.breedSelectedFrogs(frogsToBreed);
+                    } else {
+                        alert("One male and one female frog must be selected.");
+                    }
+                    break;
+
+                case 'submit':
+                    this.add(new Frog({
+                        name: this.newFrogPopup.querySelector('input[name="frogName"]').value,
+                        gender: this.newFrogPopup.querySelector('input[name="frogGender"]:checked').value
+                    }));
+
+                    this.newFrogPopup.querySelector('input[name="frogName"]').value = "";
+                    this.newFrogPopup.classList.add('hidden');
                     break;
                 }
             };
@@ -88,7 +111,7 @@
                 this.create();
             };
 
-            // TODO: Pond object is getting big. Look at ways of cutting it down and moving logic into other objects
+            // TODO: Pond object is getting big. refactor, moving related logic into objects
             Pond.prototype = function () {
                 var _body,
                     _frogs,
@@ -96,6 +119,7 @@
                     _pond,    /* reference to self */
                     _nameInput,
                     _submit,
+                    _close,
                     newFrogPopup;
 
                 return {
@@ -140,6 +164,7 @@
                                 '</div>' +
 
                                 '<button disabled=disabled class="submit">Submit</button>' +
+                                '<button class="close">Close</button>' +
                             '</div>';
 
                         _body.appendChild(this.newFrogPopup);
@@ -148,25 +173,17 @@
                         _actions = _body.getElementsByClassName('actions')[0];
                         _nameInput = this.newFrogPopup.querySelector('input#frogName');
                         _submit = this.newFrogPopup.querySelector('.submit');
+                        _close = this.newFrogPopup.querySelector('.close');
                     },
 
                     addEventListeners: function () {
                         /* perform an action on this pond only */
                         _actions.addEventListener('click', function (e) { performActions.call(_pond, e); }, false);
+                        _submit.addEventListener('click', function (e) { performActions.call(_pond, e); }, false);
+                        _close.addEventListener('click', function (e) { performActions.call(_pond, e); }, false);
 
                         _nameInput.addEventListener('keyup', function (e) {
-                            var submitButton = this.newFrogPopup.querySelector('.submit');
-                            submitButton.disabled = e.currentTarget.validity.valid ? false : true;
-                        }.bind(_pond));
-
-                        _submit.addEventListener('click', function () {
-                            this.add(new Frog({
-                                name: this.newFrogPopup.querySelector('input[name="frogName"]').value,
-                                gender: this.newFrogPopup.querySelector('input[name="frogGender"]:checked').value
-                            }));
-
-                            this.newFrogPopup.querySelector('input[name="frogName"]').value = "";
-                            this.newFrogPopup.classList.add('hidden');
+                            _submit.disabled = e.currentTarget.validity.valid ? false : true;
                         }.bind(_pond));
                     },
 
@@ -176,10 +193,10 @@
                             if(!frogs.propertyIsEnumerable(length) && typeof frogs.splice !== "function") {
                                 frogs = [frogs];
                             }
-                        }
 
-                        for(var i = 0, l = frogs.length; i < l; i++) {
-                            this.addFrog(frogs[i]);
+                            for(var i = 0, l = frogs.length; i < l; i++) {
+                                this.addFrog(frogs[i]);
+                            }
                         }
                     },
 
@@ -210,11 +227,10 @@
                         if(frogToKill instanceof Frog) {
                             var frogDomElement = _frogs.querySelector('li[data-frogid="' + frogToKill.getId() + '"]');
 
-                            // die die die
                             frogDomElement.remove();
 
                             this.Frogs = this.Frogs.filter(function (frog) {
-                                return frog.getId() === frogToKill.getId();
+                                return frog.getId() !== frogToKill.getId();
                             });
                         }
                     },
@@ -243,6 +259,42 @@
                             // or I could have just imported in underscore/mout/lodash...
                             return frogIds.indexOf(frog.getId()) > -1;
                         });
+                    },
+
+                    getFrogsForBreeding: function (frogs) {
+                        if (frogs.length === 2) {
+                            var femaleFrog;
+                            var maleFrog;
+
+                            for(var i = 0, l = frogs.length; i < l; i++) {
+                                var frog = frogs[i];
+
+                                if (frog.gender === 'f') {
+                                    femaleFrog = frog;
+                                } else {
+                                    maleFrog = frog;
+                                }
+                            }
+
+                            if(femaleFrog && maleFrog) {
+                                return {
+                                    female: femaleFrog,
+                                    male: maleFrog
+                                };
+                            }
+                        }
+
+                        return null;
+                    },
+
+                    breedSelectedFrogs: function (frogs) {
+                        var name = frogs.female.name + frogs.male.name + Math.floor(getRandomNumbersInRange(1, 999));
+                        var gender = getRandomNumbersInRange(0, 1) >= 0.5 ? 'f' : 'm';
+
+                        this.add(new Frog({
+                            name: name,
+                            gender: gender
+                        }));
                     }
                 };
             }();
@@ -252,25 +304,24 @@
             };
 
             Frog.prototype = function () {
-
                 var _id,
                     name,
-                    gender,
+                    gender;
 
-                    birth = function (frogData) {
+                return {
+                    birth: function (frogData) {
                         this.name = frogData.name;
                         this.gender = frogData.gender;
                     },
 
-                    setId = function (id) {
+                    setId: function (id) {
                         this._id = parseInt(id);
                     },
 
-                    getId = function () {
+                    getId: function () {
                         return this._id;
-                    };
-
-                return { birth: birth, setId: setId, getId: getId };
+                    }
+                };
             }();
 
             var frogPond = new Pond();
