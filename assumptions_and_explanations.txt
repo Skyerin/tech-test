@@ -1,0 +1,43 @@
+Tech Test Assumptions, Explanations and Instructions
+
+No third party libraries have been brought into this tech test. Comments
+have been put into the code in places where I would have brought in
+third party libraries, such as handlebars for html templating, utility
+functions and requirejs (so each object could sit in its own file).
+
+Technical details have also been left in as comments in places. These
+types of comments I would never leave in any general development work,
+but as this is a technical test, I put these in to explain some parts or
+different things I would do depending on browsers needed to be
+supported.
+
+No test code has been written for this. All testing and checks along the
+way was done using 'debugger'. In a true development environment, I
+would have had karma setup with jasmine for the tests, which I would run
+in test-watch mode so as I made code changes, I could see the relevent
+tests run and make sure I didn't break anything as I refactored.
+
+Also, additional UI elements have not been styled very well - they have
+just been made functional. This was due to trying to keep the time at
+around an hour.
+
+To select frogs, you just click the list element of them on the page.
+When selected, the background colour will turn white. To deselect, just
+click again and the background will turn blue/pink again dependent on
+frog gender.
+
+As, according to the readme, submissions should be completed in an hour,
+error messages have been left in alerts rather than putting it into a
+dom element. If more time could have been spent on this, I would have
+created a function which would be passed an exception, which would then
+specify an error type (dependent on the exception type thrown) and print
+the error message from the exception to the screen. E.G. "No frogs
+selected: please select frogs to $actionType" where $actionType is
+either breed or kill, which requires frogs to be selected for the
+specified action.
+
+For breeding, we assume that breeding requires two frogs, one female and
+one male, creating a single frog, with 100% success. Gender is 50/50
+chance using Math.random (which is pseudorandom). The name is a
+combination of the female parent's name, male parent's name followed by
+a random number between 1-999.

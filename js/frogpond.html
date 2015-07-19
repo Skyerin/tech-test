@@ -69,8 +69,7 @@
                     break;
 
                 case 'kill':
-                    var getSelectedFrogs = this.getSelectedFrogs.bind(this);
-                    var frogsToKill = getSelectedFrogs();
+                    var frogsToKill = this.getSelectedFrogs.call(this);
 
                     if (frogsToKill.length) {
                         // if we were only supporting IE9 onwards, we could use frogs.forEach(function (frog) { ... }
@@ -85,8 +84,7 @@
                     break;
 
                 case 'breed':
-                    var getSelectedFrogs = this.getSelectedFrogs.bind(this);
-                    var frogsToBreed = this.getFrogsForBreeding(getSelectedFrogs());
+                    var frogsToBreed = this.getFrogsForBreeding(this.getSelectedFrogs.call(this));
 
                     if (frogsToBreed) {
                         this.breedSelectedFrogs(frogsToBreed);
@@ -111,7 +109,6 @@
                 this.create();
             };
 
-            // TODO: Pond object is getting big. refactor, moving related logic into objects
             Pond.prototype = function () {
                 var _body,
                     _frogs,
@@ -132,6 +129,7 @@
                         this.addEventListeners();
                     },
 
+                    // TODO: introduce templating system. handlebars is an option for the html
                     domSetup: function () {
                         _body = document.createElement('div');
                         _body.className = 'frogPond';
@@ -184,7 +182,7 @@
 
                         _nameInput.addEventListener('keyup', function (e) {
                             _submit.disabled = e.currentTarget.validity.valid ? false : true;
-                        }.bind(_pond));
+                        });
                     },
 
                     add: function (frogs) { /* accepts array of frogs or single frog */
